@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a8a"/>
+      <stop offset="55%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1f2937"/>
+      <stop offset="100%" stop-color="#0f172a"/>
+    </linearGradient>
+    <radialGradient id="star" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="1"/>
+      <stop offset="60%" stop-color="#fef3c7" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#fef3c7" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Sky -->
+  <rect width="800" height="500" fill="url(#sky)"/>
+
+  <!-- Subtle stars -->
+  <g fill="#ffffff" opacity="0.85">
+    <circle cx="90"  cy="70"  r="1.3"/>
+    <circle cx="180" cy="110" r="1"/>
+    <circle cx="260" cy="50"  r="1.5"/>
+    <circle cx="360" cy="95"  r="1"/>
+    <circle cx="450" cy="35"  r="1.2"/>
+    <circle cx="560" cy="105" r="1"/>
+    <circle cx="640" cy="55"  r="1.4"/>
+    <circle cx="720" cy="90"  r="1"/>
+  </g>
+
+  <!-- Glowing hero star -->
+  <circle cx="600" cy="110" r="70" fill="url(#star)"/>
+  <g fill="#fffbeb">
+    <polygon points="600,75 608,103 638,103 614,122 622,152 600,134 578,152 586,122 562,103 592,103"/>
+  </g>
+
+  <!-- Ground -->
+  <rect y="360" width="800" height="140" fill="url(#ground)"/>
+
+  <!-- Temple silhouette (centered spire, wings, stepped base) -->
+  <g fill="#0b1220" stroke="#111827" stroke-width="1">
+    <!-- base platform -->
+    <rect x="140" y="340" width="520" height="22" rx="2"/>
+    <!-- main body -->
+    <rect x="200" y="260" width="400" height="80"/>
+    <!-- side wings -->
+    <rect x="160" y="290" width="60" height="50"/>
+    <rect x="580" y="290" width="60" height="50"/>
+    <!-- stepped upper body -->
+    <rect x="260" y="220" width="280" height="40"/>
+    <rect x="300" y="190" width="200" height="30"/>
+    <!-- central tower -->
+    <rect x="370" y="150" width="60" height="40"/>
+    <!-- spire -->
+    <polygon points="400,80 378,150 422,150"/>
+    <!-- tiny windows -->
+    <g fill="#fcd34d" opacity="0.75">
+      <rect x="220" y="280" width="6" height="14"/>
+      <rect x="240" y="280" width="6" height="14"/>
+      <rect x="260" y="280" width="6" height="14"/>
+      <rect x="540" y="280" width="6" height="14"/>
+      <rect x="560" y="280" width="6" height="14"/>
+      <rect x="580" y="280" width="6" height="14"/>
+      <rect x="320" y="230" width="6" height="12"/>
+      <rect x="340" y="230" width="6" height="12"/>
+      <rect x="460" y="230" width="6" height="12"/>
+      <rect x="480" y="230" width="6" height="12"/>
+    </g>
+    <!-- angel Moroni tiny figure at spire top -->
+    <circle cx="400" cy="76" r="3" fill="#fde68a"/>
+  </g>
+
+  <!-- Bottom caption -->
+  <text x="400" y="440" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif"
+        font-size="22" fill="#f3f4f6" letter-spacing="2">
+    Temple photo not yet added
+  </text>
+  <text x="400" y="468" text-anchor="middle" font-family="system-ui, -apple-system, sans-serif"
+        font-size="13" fill="#cbd5e1" opacity="0.85">
+    Drop a file named images/&lt;abbr&gt;.jpg into the folder to replace this
+  </text>
+</svg>
