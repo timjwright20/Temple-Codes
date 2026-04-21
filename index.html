@@ -1,0 +1,336 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>LDS Temple Locator</title>
+
+<!-- three.js + globe.gl (UMD builds, work on file://) -->
+<script src="https://unpkg.com/three@0.149.0/build/three.min.js"></script>
+<script src="https://unpkg.com/globe.gl@2.27.0/dist/globe.gl.min.js"></script>
+
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:#111833;
+    --panel-2:#192146;
+    --accent:#fbbf24;          /* star gold  */
+    --accent-hot:#ffffff;      /* selected star */
+    --accent-soft:#fde68a;
+    --muted:#9aa4c7;
+    --ink:#e6ebff;
+    --line:rgba(255,255,255,.08);
+    --link:#7dd3fc;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ height:100%; margin:0; background:var(--bg); color:var(--ink);
+             font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+             -webkit-font-smoothing:antialiased; }
+  #app{ display:grid; grid-template-columns: 380px 1fr; grid-template-rows: 54px 1fr;
+        height:100vh; overflow:hidden; }
+
+  header{
+    grid-column:1 / 3; display:flex; align-items:center; gap:14px;
+    padding:0 18px; border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg, #0b1020 0%, #0a0e1c 100%);
+  }
+  header .logo{ width:26px; height:26px; }
+  header h1{ margin:0; font-size:16px; letter-spacing:.2px; font-weight:600; }
+  header h1 span{ color:var(--accent); font-weight:700; }
+  header .count{ margin-left:auto; font-size:12px; color:var(--muted); }
+
+  aside{
+    grid-column:1; grid-row:2; overflow:hidden; display:flex; flex-direction:column;
+    background:var(--panel); border-right:1px solid var(--line);
+  }
+  .search-wrap{ padding:14px 14px 10px; border-bottom:1px solid var(--line); }
+  .search-wrap input{
+    width:100%; padding:11px 12px; border-radius:10px;
+    border:1px solid var(--line); background:#0d1330; color:var(--ink);
+    font-size:14px; outline:none;
+  }
+  .search-wrap input::placeholder{ color:#6e799a; }
+  .search-wrap input:focus{ border-color:var(--accent); box-shadow:0 0 0 3px rgba(251,191,36,.15); }
+  .search-hint{ font-size:11px; color:var(--muted); margin-top:6px; }
+  .search-hint code{ background:#0d1330; padding:1px 5px; border-radius:4px; color:var(--accent-soft); }
+
+  #results{ list-style:none; margin:0; padding:6px; overflow:auto; max-height:45%; border-bottom:1px solid var(--line); }
+  #results li{ padding:9px 10px; border-radius:8px; cursor:pointer; display:flex; align-items:baseline; gap:10px; }
+  #results li:hover{ background:var(--panel-2); }
+  #results li.active{ background:#2a1f00; outline:1px solid var(--accent); }
+  #results .abbr{ font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+                  font-size:11px; color:var(--accent); letter-spacing:.5px; min-width:52px; }
+  #results .nm{ font-size:13px; }
+  #results .empty{ color:var(--muted); padding:8px 10px; font-style:italic; }
+
+  #detail{ overflow:auto; flex:1; padding:0 0 20px; }
+  #detail .hero{ position:relative; }
+  #detail .hero img{ width:100%; display:block; aspect-ratio: 8/5; object-fit:cover; background:#0d1330; }
+  #detail .hero .name{
+    position:absolute; left:0; right:0; bottom:0; padding:14px 14px 12px;
+    background:linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,.75) 100%);
+    font-family:Georgia, "Times New Roman", serif; font-size:18px; line-height:1.25;
+  }
+  #detail .body{ padding:12px 14px 0; }
+  #detail .row{ display:grid; grid-template-columns: 92px 1fr; gap:6px 10px; margin:8px 0; font-size:13px; }
+  #detail .row .k{ color:var(--muted); }
+  #detail .row .v{ color:var(--ink); }
+  #detail .notes{ margin:14px 0 6px; padding-top:10px; border-top:1px solid var(--line);
+                   font-size:13px; line-height:1.55; color:#dfe6ff; }
+  #detail .notes h4{ margin:0 0 6px; font-size:12px; color:var(--muted);
+                      text-transform:uppercase; letter-spacing:1px; font-weight:600; }
+  #detail.empty-state{ display:flex; flex-direction:column; align-items:center; justify-content:center; padding:30px 20px; }
+  #detail.empty-state p{ color:var(--muted); font-size:13px; text-align:center; margin:10px 0 0; }
+  #detail.empty-state svg{ width:80px; height:80px; opacity:.6; }
+
+  main{ grid-column:2; grid-row:2; position:relative; overflow:hidden;
+         background: radial-gradient(ellipse at center, #0d1636 0%, #05070f 80%); }
+  #globe{ width:100%; height:100%; }
+  .globe-hint{
+    position:absolute; bottom:14px; left:14px; right:14px;
+    text-align:center; color:var(--muted); font-size:12px; pointer-events:none;
+  }
+  .globe-loading{
+    position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+    color:var(--muted); font-size:14px; pointer-events:none;
+  }
+  @media (max-width: 860px){
+    #app{ grid-template-columns:1fr; grid-template-rows: 54px 50vh 1fr; }
+    aside{ grid-column:1; grid-row:3; border-right:none; border-top:1px solid var(--line); }
+    main { grid-column:1; grid-row:2; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <svg class="logo" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+      <defs>
+        <radialGradient id="lg" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#fff"/>
+        <stop offset="1" stop-color="#fbbf24" stop-opacity="0"/></radialGradient>
+      </defs>
+      <circle cx="20" cy="20" r="18" fill="#111833" stroke="#fbbf24" stroke-width="1.2"/>
+      <circle cx="20" cy="20" r="12" fill="url(#lg)" opacity=".6"/>
+      <polygon fill="#fde68a" points="20,7 22.8,16 32,16 24.6,21.5 27.4,30.5 20,25 12.6,30.5 15.4,21.5 8,16 17.2,16"/>
+    </svg>
+    <h1>LDS <span>Temple Locator</span></h1>
+    <div class="count" id="count"></div>
+  </header>
+
+  <aside>
+    <div class="search-wrap">
+      <input id="search" type="text" spellcheck="false" autocomplete="off"
+             placeholder="Search by abbreviation or name (try SLAKE, NZEAL, LANGE…)"/>
+      <div class="search-hint">Type a 5-letter abbreviation like <code>PROVO</code>, <code>SPAUL</code>, <code>TOKYO</code> — or a temple/city name.</div>
+    </div>
+    <ul id="results"></ul>
+    <div id="detail" class="empty-state">
+      <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <circle cx="32" cy="32" r="28" stroke="#fbbf24" stroke-width="1.2" opacity=".6"/>
+        <polygon fill="#fbbf24" points="32,16 35,25 45,25 37,31 40,41 32,35 24,41 27,31 19,25 29,25"/>
+      </svg>
+      <p>Search for a temple above, or click a star on the globe.</p>
+    </div>
+  </aside>
+
+  <main>
+    <div id="globe"></div>
+    <div class="globe-loading" id="loading">Loading globe…</div>
+    <div class="globe-hint">Drag to spin · Scroll to zoom · Click a star to open its card</div>
+  </main>
+</div>
+
+<!-- Temple data (embedded via <script> so file:// works) -->
+<script src="data/temples.js"></script>
+
+<script>
+(function(){
+  'use strict';
+
+  // ---------- Data ----------
+  const TEMPLES = (window.TEMPLES || []).map((t, i) => ({ ...t, _idx:i }));
+  document.getElementById('count').textContent = TEMPLES.length + ' dedicated temples';
+
+  // ---------- DOM refs ----------
+  const $search = document.getElementById('search');
+  const $results = document.getElementById('results');
+  const $detail = document.getElementById('detail');
+  const $loading = document.getElementById('loading');
+  const PLACEHOLDER = 'images/_placeholder.svg';
+
+  // ---------- Globe setup ----------
+  let globe = null;
+  let selectedAbbr = null;
+
+  function initGlobe(){
+    if (typeof Globe !== 'function') {
+      $loading.textContent = 'Could not load 3D globe library. Stars list still works →';
+      return;
+    }
+    globe = Globe()(document.getElementById('globe'))
+      .backgroundColor('rgba(0,0,0,0)')
+      .globeImageUrl('https://unpkg.com/three-globe@2.27.0/example/img/earth-night.jpg')
+      .bumpImageUrl('https://unpkg.com/three-globe@2.27.0/example/img/earth-topology.png')
+      .atmosphereColor('#7dd3fc')
+      .atmosphereAltitude(0.18)
+      .pointsData(TEMPLES)
+      .pointLat(d => d.lat).pointLng(d => d.lon)
+      .pointColor(d => d.abbr === selectedAbbr ? '#ffffff' : '#fbbf24')
+      .pointAltitude(d => d.abbr === selectedAbbr ? 0.05 : 0.012)
+      .pointRadius(d => d.abbr === selectedAbbr ? 0.9 : 0.28)
+      .pointLabel(d =>
+        `<div style="background:rgba(12,18,40,.92);color:#fde68a;padding:6px 10px;
+         border:1px solid #fbbf24;border-radius:8px;font:12px/1.3 system-ui;
+         box-shadow:0 2px 12px rgba(0,0,0,.5)">
+           <div style="font-weight:700;color:#ffffff">${esc(d.name)}</div>
+           <div style="opacity:.85">${esc(d.city)}${d.region ? ', '+esc(d.region) : ''}</div>
+           <div style="opacity:.7;font-size:11px;margin-top:2px">${esc(d.abbr)} · ${esc(d.country)}</div>
+         </div>`
+      )
+      .onPointClick(d => selectTemple(d.abbr, /*fly*/ true))
+      .onGlobeReady(() => { $loading.style.display = 'none'; });
+
+    // Initial camera position (above the Americas with a tilt)
+    globe.pointOfView({ lat: 20, lng: -90, altitude: 2.2 }, 0);
+
+    // Slow gentle auto-rotation until first selection
+    if (globe.controls) {
+      const controls = globe.controls();
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.25;
+    }
+
+    // Resize handling
+    window.addEventListener('resize', () => {
+      globe.width(main.offsetWidth);
+      globe.height(main.offsetHeight);
+    });
+  }
+  const main = document.querySelector('main');
+  initGlobe();
+
+  // Helper to refresh star colors/sizes when selection changes
+  function refreshMarkers(){
+    if (!globe) return;
+    // globe.gl reuses the same array, so we re-set pointsData to force a redraw
+    globe.pointsData([...TEMPLES]);
+  }
+
+  // ---------- Search / results list ----------
+  function matches(query){
+    const q = query.trim().toLowerCase();
+    if (!q) return TEMPLES.slice(0, 30); // default: first 30 alphabetically
+    return TEMPLES.filter(t => {
+      const a = t.abbr.toLowerCase();
+      const n = t.name.toLowerCase();
+      const c = (t.city || '').toLowerCase();
+      const co = (t.country || '').toLowerCase();
+      // abbreviation prefix match is highest priority
+      return a.startsWith(q) || n.includes(q) || c.includes(q) || co.includes(q);
+    }).sort((a,b) => {
+      const aa = a.abbr.toLowerCase().startsWith(q) ? 0 : 1;
+      const bb = b.abbr.toLowerCase().startsWith(q) ? 0 : 1;
+      if (aa !== bb) return aa - bb;
+      return a.name.localeCompare(b.name);
+    }).slice(0, 80);
+  }
+
+  function renderList(query){
+    const list = matches(query);
+    if (list.length === 0){
+      $results.innerHTML = '<li class="empty">No temples match.</li>';
+      return;
+    }
+    $results.innerHTML = list.map(t =>
+      `<li data-abbr="${esc(t.abbr)}" class="${t.abbr === selectedAbbr ? 'active' : ''}">
+         <span class="abbr">${esc(t.abbr)}</span>
+         <span class="nm">${esc(t.name)}</span>
+       </li>`
+    ).join('');
+  }
+
+  $search.addEventListener('input', e => renderList(e.target.value));
+  $search.addEventListener('keydown', e => {
+    if (e.key === 'Enter') {
+      const first = $results.querySelector('li[data-abbr]');
+      if (first) selectTemple(first.getAttribute('data-abbr'), true);
+    }
+  });
+  $results.addEventListener('click', e => {
+    const li = e.target.closest('li[data-abbr]');
+    if (li) selectTemple(li.getAttribute('data-abbr'), true);
+  });
+
+  // ---------- Detail card ----------
+  function renderDetail(t){
+    if (!t){
+      $detail.className = 'empty-state';
+      $detail.innerHTML =
+        `<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+           <circle cx="32" cy="32" r="28" stroke="#fbbf24" stroke-width="1.2" opacity=".6"/>
+           <polygon fill="#fbbf24" points="32,16 35,25 45,25 37,31 40,41 32,35 24,41 27,31 19,25 29,25"/>
+         </svg>
+         <p>Search for a temple above, or click a star on the globe.</p>`;
+      return;
+    }
+    $detail.className = '';
+    const location = [t.city, t.region && t.region !== t.city ? t.region : null, t.country]
+      .filter(Boolean).join(', ');
+    $detail.innerHTML = `
+      <div class="hero">
+        <img src="${esc(t.image)}" alt="${esc(t.name)}"
+             onerror="this.onerror=null;this.src='${PLACEHOLDER}'" />
+        <div class="name">${esc(t.name)}</div>
+      </div>
+      <div class="body">
+        <div class="row"><div class="k">Abbreviation</div><div class="v" style="font-family:ui-monospace,Menlo,monospace;color:var(--accent)">${esc(t.abbr)}</div></div>
+        <div class="row"><div class="k">Location</div><div class="v">${esc(location)}</div></div>
+        <div class="row"><div class="k">Coordinates</div><div class="v">${t.lat.toFixed(4)}°, ${t.lon.toFixed(4)}°</div></div>
+        <div class="row"><div class="k">Dedicated</div><div class="v">${esc(fmtDate(t.dedicated))}</div></div>
+        <div class="row"><div class="k">Language${(t.languages||[]).length>1?'s':''}</div><div class="v">${esc((t.languages||[]).join(', ') || '—')}</div></div>
+        <div class="notes"><h4>Church & Mission history</h4>${esc(t.notes || '—')}</div>
+      </div>
+    `;
+  }
+
+  // ---------- Selection ----------
+  function selectTemple(abbr, flyTo){
+    const t = TEMPLES.find(x => x.abbr === abbr);
+    if (!t) return;
+    selectedAbbr = abbr;
+    renderDetail(t);
+    renderList($search.value);
+    refreshMarkers();
+    if (globe && flyTo){
+      // Stop auto-rotation on first selection
+      if (globe.controls) globe.controls().autoRotate = false;
+      globe.pointOfView({ lat: t.lat, lng: t.lon, altitude: 1.2 }, 900);
+    }
+    // Scroll the active list item into view if present
+    const active = $results.querySelector('li.active');
+    if (active) active.scrollIntoView({ block:'nearest' });
+  }
+
+  // ---------- Utils ----------
+  function esc(s){
+    return String(s == null ? '' : s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function fmtDate(iso){
+    if (!iso) return '—';
+    const parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    const y = +parts[0], m = +parts[1], d = +parts[2];
+    const month = ['January','February','March','April','May','June',
+                   'July','August','September','October','November','December'][m-1] || '';
+    return `${month} ${d}, ${y}`;
+  }
+
+  // ---------- Boot ----------
+  renderList('');
+})();
+</script>
+</body>
+</html>
